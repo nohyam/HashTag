@@ -43,26 +43,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nohyam.hashtag.ui.theme.HashTagTheme
-
-// 화면 확인용 가상 작품과 키워드 선택 인원입니다.
-private data class SampleWork(
-    val id: Int,
-    val title: String,
-    val type: String,
-    val year: Int,
-    val keywordVotes: Map<String, Int>
-)
-
-private val sampleWorks = listOf(
-    SampleWork(1, "마지막 단서", "영화", 2024, mapOf("반전" to 1284, "몰입감" to 936, "스릴러" to 815)),
-    SampleWork(2, "기억의 밤을 걷다", "드라마", 2023, mapOf("반전" to 752, "몰입감" to 684, "여운이남는" to 310)),
-    SampleWork(3, "내일의 우리", "영화", 2025, mapOf("시간여행" to 940, "반전" to 521, "몰입감" to 708)),
-    SampleWork(4, "작은 계절", "드라마", 2024, mapOf("힐링" to 1203, "가족애" to 824, "감동" to 659)),
-    SampleWork(5, "우리의 여름", "영화", 2022, mapOf("힐링" to 734, "영상미" to 692, "여운이남는" to 481)),
-    SampleWork(6, "단서 없는 방", "드라마", 2025, mapOf("반전" to 891, "몰입감" to 1024, "스릴러" to 932)),
-    SampleWork(7, "다시 만난 우리", "드라마", 2021, mapOf("가족애" to 452, "감동" to 563, "코미디" to 287)),
-    SampleWork(8, "시간의 단서", "영화", 2023, mapOf("시간여행" to 602, "반전" to 479, "몰입감" to 523))
-)
+import com.nohyam.hashtag.ui.sample.SampleWork
+import com.nohyam.hashtag.ui.sample.sampleWorks
 
 /** API 없이 화면 상태를 확인하기 위한 더미 상태입니다. */
 enum class SearchResultState { Content, Loading, Error }
@@ -72,7 +54,9 @@ enum class SearchResultState { Content, Loading, Error }
 fun SearchResultScreen(
     modifier: Modifier = Modifier,
     initialQuery: String = "",
-    state: SearchResultState = SearchResultState.Content
+    state: SearchResultState = SearchResultState.Content,
+    onBackClick: () -> Unit = {},
+    onWorkClick: (id: Int, mediaType: String) -> Unit = { _, _ -> }
 ) {
     var query by rememberSaveable(initialQuery) { mutableStateOf(initialQuery) }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -104,6 +88,28 @@ fun SearchResultScreen(
 
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {
+                        keyboardController?.hide()
+                        onBackClick()
+                    },
+                    modifier = Modifier.semantics { contentDescription = "뒤로 가기" }
+                ) {
+                    val color = MaterialTheme.colorScheme.onSurface
+                    Canvas(modifier = Modifier.size(24.dp)) {
+                        val start = Offset(size.width * 0.2f, size.height * 0.5f)
+                        val stroke = 2.dp.toPx()
+                        drawLine(color, start, Offset(size.width * 0.8f, size.height * 0.5f), stroke, StrokeCap.Round)
+                        drawLine(color, start, Offset(size.width * 0.5f, size.height * 0.2f), stroke, StrokeCap.Round)
+                        drawLine(color, start, Offset(size.width * 0.5f, size.height * 0.8f), stroke, StrokeCap.Round)
+                    }
+                }
+                Text("작품 검색", style = MaterialTheme.typography.titleLarge)
+            }
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
@@ -132,21 +138,11 @@ fun SearchResultScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                keywords.forEachIndexed { index, keyword ->
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (index > 0) {
-                                            Text(
-                                                "AND",
-                                                modifier = Modifier.padding(end = 8.dp),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        }
-                                        KeywordChip(keyword = keyword, onRemove = {
-                                            query = keywords.filterNot { it == keyword }
-                                                .joinToString(" ") { "#$it" }
-                                        })
-                                    }
+                                keywords.forEach { keyword ->
+                                    KeywordChip(keyword = keyword, onRemove = {
+                                        query = keywords.filterNot { it == keyword }
+                                            .joinToString(" ") { "#$it" }
+                                    })
                                 }
                             }
                             Text(
@@ -157,7 +153,7 @@ fun SearchResultScreen(
                         }
                     }
                 }
-                item(key = "summary") {
+                item(key = "searchResult") {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = if (isKeywordSearch || searchText.isBlank()) "검색 결과" else "‘$searchText’ 제목 검색 결과",
@@ -231,7 +227,10 @@ fun SearchResultScreen(
                     }
                 }
                 items(results, key = { it.id }) { work ->
-                    WorkResultCard(work = work, keywords = keywords)
+                    WorkResultCard(work = work, keywords = keywords, onClick = {
+                        keyboardController?.hide()
+                        onWorkClick(work.id, work.mediaType)
+                    })
                 }
             }
         }
@@ -280,8 +279,8 @@ private fun KeywordChip(keyword: String, onRemove: () -> Unit) {
 }
 
 @Composable
-private fun WorkResultCard(work: SampleWork, keywords: List<String>) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+private fun WorkResultCard(work: SampleWork, keywords: List<String>, onClick: () -> Unit) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
         Row(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)

@@ -1,6 +1,7 @@
 package com.nohyam.hashtag.ui.home
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -12,20 +13,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -35,7 +30,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nohyam.hashtag.ui.theme.HashTagTheme
@@ -44,9 +38,7 @@ private val recommendedKeywords = listOf("반전", "힐링", "시간여행", "�
 private val popularKeywords = listOf("스릴러", "감동", "몰입감", "코미디", "영상미")
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
-    var query by rememberSaveable { mutableStateOf("") }
-
+fun HomeScreen(modifier: Modifier = Modifier, onSearchClick: () -> Unit = {}) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         Column(
             modifier = Modifier
@@ -86,17 +78,26 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                         text = "영화와 드라마를 제목 또는 #키워드로 찾아봐",
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
+                    Surface(
+                        onClick = onSearchClick,
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("제목 또는 #키워드") },
-                        placeholder = { Text("검색어를 입력하세요") },
-                        leadingIcon = { SearchIcon() },
-                        singleLine = true,
                         shape = RoundedCornerShape(16.dp),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
-                    )
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            SearchIcon()
+                            Text(
+                                text = "제목 또는 #키워드 검색",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
 
